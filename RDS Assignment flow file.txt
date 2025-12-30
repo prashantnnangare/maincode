@@ -1,0 +1,56 @@
+import boto3┌──────────────────────────┐
+                    │   S3 SOURCE BUCKET        │
+                    │  input/file.csv           │
+                    └─────────────┬────────────┘
+                                  │
+                                  ▼
+┌───────────────────────────────────────────────────┐
+│                LAMBDA 1 (INGEST)                  │
+│---------------------------------------------------│
+│ • Read CSV from S3                                │
+│ • Load into Pandas DataFrame                      │
+│ • Insert into RDS raw_table                       │
+│ • Trigger Step Function                           │
+└─────────────┬─────────────────────────────────────┘
+              │
+              ▼
+┌───────────────────────────────────────────────────┐
+│              AWS STEP FUNCTIONS                   │
+│        (Orchestration / Sequencing)               │
+└─────────────┬─────────────────────────────────────┘
+              │
+              ▼
+┌───────────────────────────────────────────────────┐
+│              LAMBDA 2 (BRONZE)                    │
+│---------------------------------------------------│
+│ • Read raw_table from RDS                         │
+│ • Basic cleaning (nulls, trim, dedupe)            │
+│ • Write to bronze_table                           │
+└─────────────┬─────────────────────────────────────┘
+              │
+              ▼
+┌───────────────────────────────────────────────────┐
+│              LAMBDA 3 (SILVER)                    │
+│---------------------------------------------------│
+│ • Read bronze_table                               │
+│ • Business transformations                       │
+│ • Type casting, derived columns                   │
+│ • Write to silver_table                           │
+└─────────────┬─────────────────────────────────────┘
+              │
+              ▼
+┌───────────────────────────────────────────────────┐
+│              LAMBDA 4 (GOLD)                      │
+│---------------------------------------------------│
+│ • Read silver_table                               │
+│ • Final curation / aggregations                   │
+│ • Write to gold_table                             │
+│ • Export gold_table to CSV (/tmp)                 │
+│ • Upload CSV to destination S3                    │
+└─────────────┬─────────────────────────────────────┘
+              │
+              ▼
+┌───────────────────────────────────────────────────┐
+│             S3 DESTINATION BUCKET                 │
+│          gold/gold_data.csv                       │
+└───────────────────────────────────────────────────┘
